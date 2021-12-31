@@ -1,0 +1,2 @@
+[delay in seconds of how long to wait]
+[app]:[time in seconds of usage]
