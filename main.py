@@ -1,6 +1,7 @@
 try:
     from win32gui import GetForegroundWindow
     from win32process import GetWindowThreadProcessId
+    from win32api import GetLastInputInfo, GetTickCount
     from psutil import Process
     from apscheduler.schedulers.background import BackgroundScheduler
 except ModuleNotFoundError:
@@ -13,6 +14,7 @@ except ModuleNotFoundError:
 
     from win32gui import GetForegroundWindow
     from win32process import GetWindowThreadProcessId
+    from win32api import GetLastInputInfo, GetTickCount
     from psutil import Process
     from apscheduler.schedulers.background import BackgroundScheduler
 
@@ -42,7 +44,13 @@ else:
     f.close()
     delay = 5
 
+def getInactiveTime():
+    return (GetTickCount()-GetLastInputInfo())/1000
+
 def main():
+    if getInactiveTime() > 300:
+        return
+
     try:
         pid = GetWindowThreadProcessId(GetForegroundWindow())
         app = Process(pid[-1]).name()
@@ -70,7 +78,7 @@ print("Started tracking app usage")
 sched.add_job(main, 'interval', seconds=delay)
 sched.start()
 try:
-    while True: # "sched" is a new thread, occupy this thread. Not very efficient, if I find something better I'll use it
+    while True: # since "sched" is a seperate thread, occupy this thread. Not very efficient, if I find something better I'll use it
         sleep(1000000)
 except KeyboardInterrupt:
     pass
