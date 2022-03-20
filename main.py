@@ -1,9 +1,14 @@
-from time import sleep
-from subprocess import getoutput
-getoutput("pip3 install psutil")
-from win32gui import GetForegroundWindow
-from win32process import GetWindowThreadProcessId
-from psutil import Process
+try:
+    from win32gui import GetForegroundWindow
+    from win32process import GetWindowThreadProcessId
+    from psutil import Process
+except ModuleNotFoundError:
+    from pip._internal import main as pipmain
+    print("Unable to find needed packages, installing them now...")
+    pipmain(["install", "--user", "pywin32"])
+    pipmain(["install", "--user", "psutil"])
+
+import time
 
 
 open("stats.txt", 'a').close()
@@ -12,7 +17,7 @@ stats = f.read().split("\n")
 f.close()
 
 apps = []
-time = []
+times = []
 
 if stats != ['']:
     delay = float(stats[0])
@@ -21,13 +26,22 @@ if stats != ['']:
         if item != "":
             split = item.split(":")
             apps.append(split[0])
-            time.append(float(split[1]))
+            times.append(float(split[1]))
 else:
+    f = open("stats.txt", 'w')
+    f.write("5")
+    f.close()
     delay = 5
 
 print("Started tracking app usage")
+
+starttime = time.time()
+timeslooped = 1
 while True:
-    sleep(delay)
+    time.sleep(delay/2)
+    if time.time()-(starttime+(delay*timeslooped)) < delay:
+        continue
+    timeslooped += 1
     try:
         pid = GetWindowThreadProcessId(GetForegroundWindow())
         app = Process(pid[-1]).name()
@@ -36,13 +50,15 @@ while True:
     if app != "":
         try: index = apps.index(app)
         except ValueError: index = None
-        if index != None: time[index] = float(time[index]) + delay
+
+        if index != None:
+            times[index] = float(times[index]) + delay
         else:
             apps.append(app)
-            time.append(delay)
+            times.append(delay)
 
     f = open("stats.txt", "w")
     f.write(f'{delay}\n')
     for app in apps:
-        f.write(f"{app}:{time[apps.index(app)]}\n")
+        f.write(f"{app}:{times[apps.index(app)]}\n")
     f.close()
