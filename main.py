@@ -2,14 +2,23 @@ try:
     from win32gui import GetForegroundWindow
     from win32process import GetWindowThreadProcessId
     from psutil import Process
+    from apscheduler.schedulers.background import BackgroundScheduler
 except ModuleNotFoundError:
     from pip._internal import main as pipmain
     print("Unable to find needed packages, installing them now...")
+
     pipmain(["install", "--user", "pywin32"])
     pipmain(["install", "--user", "psutil"])
+    pipmain(["install", "--user", "apscheduler"])
 
-import time
+    from win32gui import GetForegroundWindow
+    from win32process import GetWindowThreadProcessId
+    from psutil import Process
+    from apscheduler.schedulers.background import BackgroundScheduler
 
+from time import sleep
+
+sched = BackgroundScheduler()
 
 open("stats.txt", 'a').close()
 f = open("stats.txt", 'r')
@@ -33,15 +42,7 @@ else:
     f.close()
     delay = 5
 
-print("Started tracking app usage")
-
-starttime = time.time()
-timeslooped = 1
-while True:
-    time.sleep(delay/2)
-    if time.time()-(starttime+(delay*timeslooped)) < delay:
-        continue
-    timeslooped += 1
+def main():
     try:
         pid = GetWindowThreadProcessId(GetForegroundWindow())
         app = Process(pid[-1]).name()
@@ -62,3 +63,14 @@ while True:
     for app in apps:
         f.write(f"{app}:{times[apps.index(app)]}\n")
     f.close()
+
+
+print("Started tracking app usage")
+
+sched.add_job(main, 'interval', seconds=delay)
+sched.start()
+try:
+    while True: # "sched" is a new thread, occupy this thread. Not very efficient, if I find something better I'll use it
+        sleep(1000000)
+except KeyboardInterrupt:
+    pass
